@@ -1,5 +1,5 @@
 ---
-title: "From MLP to CNN: Spatial Feature Learning and Classifier-Head Efficiency on BloodMNIST"
+title: "From MLP to CNN: Spatial Feature Learning and Classifier-Head Efficiency aon BloodMNIST"
 layout: single
 author_profile: true
 ---
@@ -64,6 +64,19 @@ Three architectures were implemented in PyTorch. Every model receives an RGB ima
 | **M0 — MLP** | Flatten → Linear(2352, 256) → Linear(256, 128) → Linear(128, 8); ReLU and Dropout after hidden layers | 636,296 |
 | **M1 — CNN + BN + Flatten** | Two Conv–BatchNorm–ReLU–MaxPool blocks (32 and 64 channels) → Flatten → Dropout → Linear(3136, 8) | 44,680 |
 | **M2 — CNN + BN + GAP** | Same two-block CNN design → GAP → Flatten → Dropout → Linear(64, 8) | 20,104 |
+
+
+<h3>Model architecture overview</h3>
+
+<p>The diagram below illustrates the three model architectures, their intermediate tensor shapes, weight initialization, classifier heads, and trainable parameter counts.</p>
+
+<p align="center">
+  <img src="{{ site.baseurl }}/images/BloodMNIST%20Model%20Architectures%20Infographic.png"
+       width="960"
+       alt="BloodMNIST model architecture diagram comparing M0 MLP, M1 CNN with Flatten, and M2 CNN with Global Average Pooling"
+       style="max-width: 100%; height: auto; border-radius: 14px;"/>
+</p>
+
 
 M0 has two fully connected hidden layers and does not use Batch Normalization. M1 and M2 use the same **CNN backbone design** but have different classifier heads; they were initialized and trained independently rather than sharing trained weights.
 
