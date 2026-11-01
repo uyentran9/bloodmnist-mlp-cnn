@@ -1,175 +1,219 @@
 ---
-title: "Investigating Vanishing Gradients and Early-Layer Trainability Across Network Depth in Deep MLPs on BloodMNIST"
+title: "From MLP to CNN: Spatial Feature Learning and Classifier-Head Efficiency on BloodMNIST"
 layout: single
 author_profile: true
---- 
+---
 
 <p align="center">
-  <img src="{{ site.baseurl }}/images/gradient_vanishing.png"
+  <img src="{{ site.baseurl }}/images/bloodmnist-mlp-cnn.png"
        width="960"
-       alt="Vanishing Gradients"
-       style="border-radius: 14px;"/>
+       alt="From MLP to CNN: BloodMNIST model comparison"
+       style="max-width: 100%; height: auto; border-radius: 14px;"/>
 </p>
 
----  
+---
 
-# Investigating Vanishing Gradients and Early-Layer Trainability Across Network Depth in Deep MLPs on BloodMNIST
+# From MLP to CNN: Spatial Feature Learning and Classifier-Head Efficiency on BloodMNIST
 
-A controlled empirical study of **depth-dependent weight-gradient attenuation, early-layer trainability, and activation-dependent optimization behavior** in multilayer perceptrons (MLPs) trained on BloodMNIST.
+An educational empirical study comparing **multilayer perceptron (MLP) and convolutional neural network (CNN) architectures**, with a focus on spatial feature learning, classifier-head design, and trainable parameter efficiency in BloodMNIST image classification.
 
-> **Project:** The Effects of Vanishing Gradients in Deep Neural Networks, individual empirical study  
-> **Research area:** Deep learning and neural network optimization  
+> **Project:** From MLP to CNN, individual empirical study  
+> **Research area:** Deep learning and biomedical image classification  
 > **Dataset:** BloodMNIST (MedMNIST v2)  
 > **Framework:** PyTorch  
-> **Experimental scope:** Two controlled stages; 18 unique main runs across three random seeds
+> **Experimental scope:** Three architectures (M0, M1, M2); one random seed; three independent training runs
+
+**Project materials:** [Jupyter notebook]({{ site.baseurl }}/files/bloodmnist-mlp-cnn-uyentran.ipynb) · [Technical report (PDF)]({{ site.baseurl }}/files/bloodmnist_technical_report_uyentran.pdf) · [GitHub repository](https://github.com/uyentran9/bloodmnist-mlp-cnn)
 
 ## Research overview
 
-Training deep feedforward networks depends on gradients reaching the parameters of earlier layers. Under some architectures and training conditions, repeated transformations during backpropagation can yield very small early-layer gradients, potentially restricting parameter movement and slowing optimization.
+A multilayer perceptron (MLP) classifies images after flattening their pixel values into a one-dimensional vector. A convolutional neural network (CNN) instead uses convolutional filters to learn features from local spatial patterns. These approaches differ in how they process image information and in the number of parameters required for classification.
 
-This project investigates **how increasing MLP depth is associated with layer-wise weight-gradient magnitudes and early-layer trainability**, then examines how **Sigmoid, Tanh, and ReLU** behave at a fixed depth. BloodMNIST serves as a standardized image-classification testbed; the objective is to analyze neural-network optimization rather than develop a clinical image-classification system.
+This project compares an **MLP baseline (M0)** with two small CNNs: **M1**, which uses a Flatten classifier head, and **M2**, which uses Global Average Pooling (GAP). The goal is to examine classification performance and parameter efficiency under shared data splits and fixed training settings, not to develop a clinical diagnostic system.
 
-### Research Questions
+### Research questions
 
-1. **RQ1 — Network Depth:** How does increasing network depth affect layer-wise weight-gradient magnitudes and early-layer trainability in Sigmoid MLPs trained on BloodMNIST?
+1. **RQ1 — MLP vs. CNN:** How do MLP and CNN architectures compare in BloodMNIST classification performance under the same official data splits and training settings?
+2. **RQ2 — Flatten vs. GAP:** How does replacing a Flatten classifier head with GAP affect trainable parameter counts and classification performance when the CNN feature-extractor design is kept the same?
 
-2. **RQ2 — Activation Functions:** At a fixed network depth and under a common initialization and training protocol, how do Sigmoid, Tanh, and ReLU differ in relative gradient attenuation, optimization progress, and validation performance?
+The study reports observed results for these two questions. It does not attempt to establish a universally superior architecture or perform statistical hypothesis testing.
 
-### Research Hypotheses
+## Dataset and preprocessing
 
-- **H1 — Depth-Dependent Gradient Attenuation:** Increasing the depth of Sigmoid MLPs is expected to produce stronger relative gradient attenuation in earlier hidden layers.
+[BloodMNIST](https://medmnist.com/) contains **17,092 RGB blood-cell images** of size **28 × 28 pixels**, representing eight classes. The official dataset splits were used without additional splitting or data augmentation.
 
-- **H2 — Early-Layer Trainability:** Stronger early-layer gradient attenuation is expected to be associated with smaller first-layer weight displacement and slower optimization progress.
+| Split | Images | Purpose |
+|---|---:|---|
+| Training | 11,959 | Learn model parameters |
+| Validation | 1,712 | Monitor performance and select the best checkpoint |
+| Test | 3,421 | Evaluate selected checkpoints once after model selection |
 
-- **H3 — Activation-Dependent Behavior:** At a fixed network depth, activation-function choice is expected to affect relative gradient attenuation and trainability under a shared initialization and optimization protocol.  
+**Preprocessing:** Images were converted to floating-point tensors using `transforms.ToTensor()`. Per-channel RGB means and standard deviations were then computed **from the training split only**:
+
+- **RGB mean:** `(0.794348, 0.659659, 0.696191)`
+- **RGB standard deviation:** `(0.215630, 0.241603, 0.117889)`
+
+The same training-derived statistics were used with `transforms.Normalize()` for all three splits. Validation and test images were not used to estimate normalization statistics. No resizing or data augmentation was applied.
 
 ## Experimental design
 
-| Component | Configuration |
+Three architectures were implemented in PyTorch. Every model receives an RGB image tensor of shape `(B, 3, 28, 28)` and produces eight raw classification logits.
+
+| Model | Architecture | Trainable parameters |
+|---|---|---:|
+| **M0 — MLP** | Flatten → Linear(2352, 256) → Linear(256, 128) → Linear(128, 8); ReLU and Dropout after hidden layers | 636,296 |
+| **M1 — CNN + BN + Flatten** | Two Conv–BatchNorm–ReLU–MaxPool blocks (32 and 64 channels) → Flatten → Dropout → Linear(3136, 8) | 44,680 |
+| **M2 — CNN + BN + GAP** | Same two-block CNN design → GAP → Flatten → Dropout → Linear(64, 8) | 20,104 |
+
+M0 has two fully connected hidden layers and does not use Batch Normalization. M1 and M2 use the same **CNN backbone design** but have different classifier heads; they were initialized and trained independently rather than sharing trained weights.
+
+### Shared training protocol
+
+| Setting | Configuration |
 |---|---|
-| Input | BloodMNIST RGB images, 28 × 28 pixels; flattened to 2,352 features |
-| Architecture | Constant-width MLPs with 256 units per hidden layer and eight output logits |
-| Stage A — Depth | D2, D5, D10, D20; Sigmoid activation |
-| Stage B — Activation | Sigmoid, Tanh, ReLU; fixed D5 architecture |
-| Initialization | Xavier Uniform (gain = 1); zero biases |
-| Optimization | Plain SGD; learning rate 0.1; momentum 0; weight decay 0 |
-| Training | Cross-entropy loss; 20 epochs; batch size 128 |
-| Repetitions | Seeds 0, 1, 2; 18 unique main runs, reusing D5–Sigmoid across stages |
-| Evaluation | Official BloodMNIST validation split; cross-entropy, accuracy, macro-F1 |
+| Random seed | 42; reset before each model run |
+| Optimizer | Adam |
+| Learning rate | 0.001 |
+| Loss function | Unweighted cross-entropy |
+| Batch size | 128 |
+| Training duration | 12 epochs per model; no early stopping |
+| Activation / Dropout | ReLU / `p = 0.2` |
+| Weight initialization | He/Kaiming Uniform for M0 hidden Linear weights and CNN convolutional weights |
+| Checkpoint selection | Highest validation macro-F1; earlier epoch retained on a tie |
+| Final evaluation | Test macro-F1 (primary), test accuracy (secondary) |
+| Error analysis | One predefined confusion matrix for M2 |
 
-The official dataset partitions contain **11,959 training**, **1,712 validation**, and **3,421 test** images. Channel-wise normalization statistics were estimated from the training split only and applied to all partitions; no data augmentation or additional splitting was performed. The test split was loaded for data verification but **was not used to report classification performance**.
-
-Stage A varied network depth under a fixed Sigmoid–Xavier–SGD configuration. D5 was then selected for Stage B because it exhibited early-layer gradient attenuation while retaining measurable optimization progress. Stage B varied only the hidden-layer activation function; it did not test activation-by-depth interactions.
+All three models used the same dataset preprocessing and fixed training settings. Each run used a fresh model, a fresh Adam optimizer, and a seed-controlled shuffled training DataLoader. No learning-rate pilot or hyperparameter search was performed.
 
 ## What I investigated
 
-- **Gradient propagation across depth:** Measured root-mean-square (RMS) weight gradients for every hidden layer, comparing absolute magnitudes and first-to-last hidden-layer gradient ratios.
-- **Early-layer trainability:** Tracked normalized first-layer weight displacement from initialization and training-loss progression.
-- **Optimization progress:** Used a predefined mean training-loss threshold of **1.50**, selected following a short learning-rate pilot and fixed before the main experiments.
-- **Activation-dependent behavior:** Compared Sigmoid, Tanh, and ReLU at D5 while holding initialization, optimizer, learning rate, data processing, and training duration constant.
-- **Run-to-run variability:** Repeated each unique configuration across three random seeds and summarized results as **mean ± sample standard deviation**.
-- **Validation performance:** Reported validation cross-entropy, accuracy, and macro-F1 alongside gradient and training measurements.
+- **Architecture comparison:** Compared an MLP that flattens images before classification with CNNs that learn spatial features using convolutional layers.
+- **Classifier-head design:** Compared Flatten and GAP after the same two-block CNN feature-extractor design.
+- **Parameter efficiency:** Counted trainable parameters and measured the reduction associated with the GAP head.
+- **Training and validation behavior:** Recorded cross-entropy loss, validation accuracy, and validation macro-F1 across 12 epochs.
+- **Held-out test performance:** Evaluated each model once using its best validation-selected checkpoint.
+- **Classification errors:** Examined M2's test confusion matrix to identify which blood-cell classes were most frequently confused.
 
 ## Models and methods
 
-`PyTorch` · `Configurable Deep MLPs` · `Backpropagation` · `Sigmoid / Tanh / ReLU` · `Xavier Uniform Initialization` · `SGD` · `Layer-wise Gradient RMS` · `Weight Displacement` · `Multi-Seed Evaluation`
+`PyTorch` · `MLP` · `CNN` · `Batch Normalization` · `ReLU` · `Dropout` · `He/Kaiming Uniform` · `Adam` · `Flatten` · `Global Average Pooling` · `Macro-F1` · `Confusion Matrix`
 
 ## Experimental results
 
-### Stage A — Network depth under Sigmoid activation
+The following results use each model's **best validation macro-F1 checkpoint**. Macro-F1 is the primary evaluation metric because it gives equal importance to the eight classes when calculating the average class F1 score.
 
-The following results summarize epoch-1 first-to-last hidden-layer **RMS weight-gradient ratios**, epoch-20 normalized first-layer weight displacement, and epoch-20 validation accuracy. Values are the mean across three seeds.
+| Model | Parameters | Best epoch | Best validation macro-F1 | Test accuracy | Test macro-F1 |
+|---|---:|---:|---:|---:|---:|
+| **M0 — MLP** | 636,296 | 12 | 0.8366 | 0.8381 | 0.8150 |
+| **M1 — CNN + Flatten** | 44,680 | 7 | **0.9156** | **0.9152** | **0.9051** |
+| **M2 — CNN + GAP** | 20,104 | 11 | 0.8596 | 0.8702 | 0.8452 |
 
-| Hidden layers | Gradient ratio (epoch 1) | First-layer displacement (epoch 20) | Validation accuracy (epoch 20) |
-|---|---:|---:|---:|
-| D2 | 0.4070 | 0.3279 | 81.23% |
-| D5 | 0.006369 | 0.1090 | 46.63% |
-| D10 | 4.837 × 10⁻⁶ | 2.740 × 10⁻⁵ | 18.20% |
-| D20 | 2.711 × 10⁻¹² | 0.0000* | 18.20% |
+The ranking by both validation and test macro-F1 was **M1 > M2 > M0**. The selected best epochs differed across models, so final evaluation used the saved checkpoints rather than necessarily the weights from epoch 12.
 
-The first-to-last hidden-layer gradient ratio decreased sharply with depth. D10 and D20 did not reach the predefined training-loss threshold of 1.50 within the 20-epoch training budget; D2 reached it at epoch 2, while D5 reached it after approximately 14–15 epochs.
+### RQ1 — MLP vs. CNN
 
-*The D20 first-layer displacement was recorded as zero at the available numerical precision. This does not imply mathematically zero parameter updates.*
+Both CNN models performed better than the MLP baseline on the held-out test set:
 
-### Stage B — Activation comparison at D5
+- **M1 vs. M0:** Test macro-F1 increased from 0.8150 to 0.9051, a difference of **0.0901 (9.01 percentage points)**.
+- **M2 vs. M0:** Test macro-F1 increased from 0.8150 to 0.8452, a difference of **0.0302 (3.02 percentage points)**.
 
-All three activation functions used the same D5 architecture, Xavier Uniform initialization, and SGD training protocol. Values are means across three seeds.
+Both CNNs also had substantially fewer trainable parameters than M0. These observations favor the tested CNN designs for this task, but they do not isolate the effect of convolution because the models also differ in Batch Normalization and parameter counts.
 
-| Activation | Gradient ratio (epoch 1) | Validation accuracy (epoch 20) | Validation macro-F1 (epoch 20) |
-|---|---:|---:|---:|
-| Sigmoid | 0.006369 | 46.63% | 0.3377 |
-| Tanh | 0.4750 | **86.21%** | **0.8441** |
-| ReLU | 0.4954 | 81.70% | 0.7946 |
+### RQ2 — Flatten vs. GAP
 
-Tanh and ReLU exhibited substantially larger relative early-layer weight gradients, greater first-layer parameter displacement, and faster training-loss reduction than Sigmoid under the shared initialization rule. Tanh attained the highest mean validation accuracy and macro-F1, while ReLU had a slightly higher mean relative gradient ratio.
+M1's Flatten head passes **3,136 features** to its final Linear layer, whereas M2's GAP head reduces the classifier input to **64 features**.
 
-### Experimental figures
+- **Parameter reduction:** M2 uses **24,576 fewer trainable parameters** than M1, a reduction of **55.0%**.
+- **Test performance difference:** M2's test macro-F1 (0.8452) is **0.0599 (5.99 percentage points)** lower than M1's (0.9051).
 
-The notebook and technical report include three primary figures:
+Under this experimental protocol, GAP provided a smaller model at the cost of lower classification performance. Fewer parameters do not, by themselves, establish faster training or inference.
 
-1. **Figure 1 — Gradient magnitude versus hidden-layer position:** Absolute and last-layer-normalized RMS weight gradients for D2, D5, D10, and D20 at epoch 1.
+### Training and validation curves
+
+The three figures below show training/validation loss and validation macro-F1 across the 12 training epochs. Dashed markers identify the selected best epochs.
+
+**Figure 1 — M0 (MLP):** Training/validation loss and validation macro-F1; best validation checkpoint at epoch 12.
+
 <p align="center">
-  <img src="{{ site.baseurl }}/images/figure1_gradient_vs_layer.png"
+  <img src="{{ site.baseurl }}/images/m0-TrainValLoss-ValMacroF1.png"
        width="960"
-       alt="Hepatic Risk Outcome Prediction"
-       style="border-radius: 14px;"/>
-</p>  
-
-2. **Figure 2 — Gradient evolution over training:** A layer-by-epoch heatmap for the D20 Sigmoid network across 20 epochs.  
-<p align="center">
-  <img src="{{ site.baseurl }}/images/figure2_gradient_evolution_d20.png"
-       width="960"
-       alt="Hepatic Risk Outcome Prediction"
-       style="border-radius: 14px;"/>
+       alt="M0 MLP training and validation loss and validation macro-F1 across 12 epochs"
+       style="max-width: 100%; height: auto; border-radius: 14px;"/>
 </p>
-3. **Figure 3 — Training-loss trajectories:** Mean training cross-entropy loss for Stage A depths, including the predefined 1.50 threshold.  
+
+**Figure 2 — M1 (CNN + Flatten):** Training/validation loss and validation macro-F1; best validation checkpoint at epoch 7.
+
 <p align="center">
-  <img src="{{ site.baseurl }}/images/figure3_training_loss_curves.png"
+  <img src="{{ site.baseurl }}/images/m1-TrainValLoss-ValMacroF1.png"
        width="960"
-       alt="Hepatic Risk Outcome Prediction"
-       style="border-radius: 14px;"/>
+       alt="M1 CNN with Flatten training and validation loss and validation macro-F1 across 12 epochs"
+       style="max-width: 100%; height: auto; border-radius: 14px;"/>
 </p>
+
+**Figure 3 — M2 (CNN + GAP):** Training/validation loss and validation macro-F1; best validation checkpoint at epoch 11.
+
+<p align="center">
+  <img src="{{ site.baseurl }}/images/m2-TrainValLoss-ValMacroF1.png"
+       width="960"
+       alt="M2 CNN with Global Average Pooling training and validation loss and validation macro-F1 across 12 epochs"
+       style="max-width: 100%; height: auto; border-radius: 14px;"/>
+</p>
+
+Training loss decreased in all three runs. Validation performance differed across architectures and did not always improve with additional epochs, supporting the use of validation-selected checkpoints.
+
+### M2 confusion matrix and error analysis
+
+The M2 confusion matrix uses predictions from the selected checkpoint on the **3,421-image official test split**. Rows represent true classes and columns represent predicted classes.
+
+<p align="center">
+  <img src="{{ site.baseurl }}/images/m2-test-confusion-matrix.png"
+       width="900"
+       alt="M2 BloodMNIST test confusion matrix showing eight blood-cell classes"
+       style="max-width: 100%; height: auto; border-radius: 14px;"/>
+</p>
+
+**Figure 4 — M2 test confusion matrix.** Diagonal cells are correct predictions; off-diagonal cells are misclassifications.
+
+M2 correctly classified **2,977 of 3,421 test images** (87.02% accuracy). Monocytes had the lowest class recall (**163/284 = 57.39%**), with **114 monocyte images** misclassified as immature granulocytes. Platelets (**469/470**) and eosinophils (**610/624**) had higher recall. These results identify where prediction errors occurred but do not establish their causes.
 
 ## What the project demonstrates
 
-The experiments provide evidence that, **under the tested Sigmoid–Xavier–SGD conditions**, increasing MLP depth is associated with pronounced early-layer weight-gradient attenuation, smaller net first-layer parameter displacement, and slower optimization. The fixed-depth comparison additionally shows that activation choice can substantially change gradient and training behavior under a common initialization rule.
+This study shows how MLP and CNN architecture choices relate to classification performance and model size in a small biomedical image-classification task. Under the tested settings, **M1 achieved the highest test macro-F1 (0.9051)**, while **M2 used the fewest trainable parameters (20,104)**.
 
-The analysis treats gradient attenuation and trainability as **empirically associated**, not as proof of a unique causal mechanism. In particular, RMS weight gradients are not direct measurements of activation-gradient propagation or network Jacobian properties. The results do not establish that one activation function is universally superior.
+The comparison illustrates a practical trade-off: replacing Flatten with GAP substantially reduced parameters, but the smaller CNN achieved lower classification performance in this single-seed experiment. These findings describe the observed results, not a universal ranking of architectures or classifier heads.
 
 ## Experimental workflow and reproducibility
 
-1. **Data preparation:** Load official BloodMNIST splits; compute RGB normalization statistics from training images only; verify dimensions and class distributions.
-2. **Model construction:** Implement and verify a configurable constant-width MLP with explicit weight and bias initialization.
-3. **Training and validation:** Train with cross-entropy and plain SGD; evaluate the full validation split after each epoch.
-4. **Gradient diagnostics:** Record weight-gradient RMS values immediately after backpropagation and before the optimizer step; log the first 100 training steps and the first 10 mini-batches of each epoch.
-5. **Protocol pilot:** Check numerical stability at D2 and D20; fix the learning rate and training-loss threshold before the main experiments.
-6. **Main experiments:** Execute Stage A and Stage B with the shared seed set; aggregate run-level results; generate figures and summary tables.
+1. **Prepare the data:** Load official BloodMNIST splits; inspect image shapes and class counts; compute training-only RGB mean/std; apply shared normalization.
+2. **Build the models:** Implement M0 and the two-head CNN design; initialize specified weights; verify output shapes and parameter counts.
+3. **Train and validate:** Train each model for 12 epochs using Adam; record training loss and validation metrics; save the best validation macro-F1 checkpoint.
+4. **Summarize results:** Export training histories and create learning curves for all three models.
+5. **Evaluate on test data:** Restore each selected checkpoint and calculate test accuracy and macro-F1 once.
+6. **Analyze errors:** Produce the predefined M2 confusion matrix and discuss the two research questions and experimental limitations.
 
-To reproduce the experiment, install the dependencies recorded in the repository's `requirements.txt`, open the notebook in `notebooks/`, and execute the cells in order. The MedMNIST package downloads BloodMNIST automatically into the locally configured `./data` directory. The notebook writes analysis outputs under `./results`.
+**Reproduction notes:** Download the [Jupyter notebook]({{ site.baseurl }}/files/bloodmnist-mlp-cnn-uyentran.ipynb) and run its cells from Part 0 through Part 6 in order. The notebook installs/imports the required Python libraries and downloads BloodMNIST through `medmnist` when needed. Its `find_project_root()` helper expects a local project directory containing `notebooks/` and `data/`; place the downloaded notebook in `notebooks/` and create `data/` before running it. Output artifacts are written to `results/` under the detected project root.
 
-The experiment was run with Python 3.13, PyTorch 2.14.1, and MedMNIST 3.0.2 on Apple Silicon using the MPS backend. Numerical results may vary with software versions, floating-point precision, and hardware backends.
+The original experiment was executed in a Python/PyTorch environment with an Apple Silicon MPS backend. Numerical results may differ across hardware backends, package versions, and execution environments.
 
-**Project materials:** [Experimental notebook](https://github.com/uyentran9/gradient-vanishing/tree/main/notebooks) · [Technical report](https://github.com/uyentran9/gradient-vanishing/tree/main/files) · [GitHub repository](https://github.com/uyentran9/gradient-vanishing)
+**Project materials:** [Executable notebook]({{ site.baseurl }}/files/bloodmnist-mlp-cnn-uyentran.ipynb) · [Technical report (PDF)]({{ site.baseurl }}/files/bloodmnist_technical_report_uyentran.pdf) · [Source repository](https://github.com/uyentran9/bloodmnist-mlp-cnn)
 
 ## Limitations and future work
 
-- The evidence comes from one low-resolution dataset and constant-width MLPs; the results should not be generalized to CNNs, Transformers, GNNs, or other datasets without further testing.
-- Deeper networks also contain more parameters, so depth-related differences cannot be attributed independently of all changes in model capacity.
-- Stage B compares activation functions only at D5 and uses a shared Xavier initialization; activation-by-depth and initialization sensitivity were not tested.
-- Three random seeds and 20 training epochs provide a limited basis for quantifying variability and longer-term optimization behavior; no formal significance tests were conducted.
-- Layer-wise RMS weight gradients and net weight displacement do not isolate the causal mechanisms of gradient attenuation or account for all individual parameter updates.
+- **Single seed:** Each model was trained once; seed-to-seed variability and statistical significance were not measured.
+- **Architectural differences:** M0 differs from the CNNs in convolution, Batch Normalization, and parameter counts. Their results do not isolate the causal effect of convolution.
+- **Image resolution:** BloodMNIST uses 28 × 28 images; findings may not generalize to higher-resolution biomedical images.
+- **Fixed training settings:** All models used one learning rate and a 12-epoch training budget, without hyperparameter tuning or data augmentation. These settings may not be optimal for every model.
+- **Clinical scope:** Test results on this benchmark do not establish performance on real-world clinical data or suitability for medical diagnosis.
 
-Potential extensions include controlled initialization comparisons, activation-saturation diagnostics, batch normalization or residual connections, alternative optimizers, and evaluations on additional architectures and datasets.
+Future work could evaluate additional random seeds, training settings, and biomedical image datasets. These extensions were **not** performed in the current study.
 
 ## Data and intended use
 
-BloodMNIST is a public research dataset from **MedMNIST v2**, derived from peripheral blood-cell microscopy data. The work is an empirical study of neural-network optimization and is **not intended for clinical diagnosis or medical decision-making**. Full dataset attribution and related literature are provided in the technical report.  
+BloodMNIST is part of the [MedMNIST benchmark](https://medmnist.com/). This educational study uses the dataset for neural-network architecture comparison. It is **not a clinically validated diagnostic system** and is not intended for medical decision-making.
 
 ## Author
 
 **Victoria Tran (My-Uyen Tran)**  
 Individual project
-
-
 
 Thank you for visiting — and for being part of my journey 🌱
