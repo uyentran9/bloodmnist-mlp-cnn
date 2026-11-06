@@ -1,5 +1,5 @@
 ---
-title: "From MLP to CNN: Spatial Feature Learning and Classifier-Head Efficiency aon BloodMNIST"
+title: "From MLP to CNN: Spatial Feature Learning and Classifier-Head Efficiency on BloodMNIST"
 layout: single
 author_profile: true
 ---
@@ -11,9 +11,7 @@ author_profile: true
        style="max-width: 100%; height: auto; border-radius: 14px;"/>
 </p>
 
----
-
-# From MLP to CNN: Spatial Feature Learning and Classifier-Head Efficiency on BloodMNIST
+---  
 
 An educational empirical study comparing **multilayer perceptron (MLP) and convolutional neural network (CNN) architectures**, with a focus on spatial feature learning, classifier-head design, and trainable parameter efficiency in BloodMNIST image classification.
 
@@ -23,7 +21,7 @@ An educational empirical study comparing **multilayer perceptron (MLP) and convo
 > **Framework:** PyTorch  
 > **Experimental scope:** Three architectures (M0, M1, M2); one random seed; three independent training runs
 
-**Project materials:** [Jupyter notebook]({{ site.baseurl }}/files/bloodmnist-mlp-cnn-uyentran.ipynb) · [Technical report (PDF)]({{ site.baseurl }}/files/bloodmnist_technical_report_uyentran.pdf) · [GitHub repository](https://github.com/uyentran9/bloodmnist-mlp-cnn)
+**Project materials:** [Jupyter notebook]({{ '/code/' | relative_url }}) · [Notebook (HTML)]({{ '/code/' | relative_url }}) · [Technical report (PDF)]({{ '/report/' | relative_url }}) · [GitHub repository](https://github.com/uyentran9/bloodmnist-mlp-cnn)
 
 ## Research overview
 
@@ -224,9 +222,12 @@ Future work could evaluate additional random seeds, training settings, and biome
 
 BloodMNIST is part of the [MedMNIST benchmark](https://medmnist.com/). This educational study uses the dataset for neural-network architecture comparison. It is **not a clinically validated diagnostic system** and is not intended for medical decision-making.
 
-## Author
+## Author and intended use
 
 **Victoria Tran (My-Uyen Tran)**  
-Individual project
+Independent educational research project · 2026  
+[Academic portfolio](https://uyentran9.github.io/uyentran-ai-blog/)
+
+**Research-use notice:** This project is not a clinically validated diagnostic system and must not be used for medical diagnosis or medical decision-making.   
 
 Thank you for visiting — and for being part of my journey 🌱
