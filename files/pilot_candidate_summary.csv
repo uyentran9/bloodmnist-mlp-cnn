@@ -1,0 +1,4 @@
+learning_rate,models_evaluated,mean_best_val_macro_f1,all_metrics_finite,runs_with_increased_train_loss,numerically_valid
+0.0003,2,0.7895953284859623,True,0,True
+0.001,2,0.8260426302396642,True,0,True
+0.003,2,0.8230043593822791,True,0,True

@@ -1,0 +1,46 @@
+{
+  "dataset": "BloodMNIST",
+  "models": [
+    "M0",
+    "M1",
+    "M2",
+    "M3"
+  ],
+  "seeds": [
+    42,
+    123,
+    2026
+  ],
+  "learning_rate": 0.001,
+  "optimizer": "adamw",
+  "weight_decay": 0.0001,
+  "loss_function": "CrossEntropyLoss",
+  "batch_size": 128,
+  "max_epochs": 20,
+  "patience": 5,
+  "selection_metric": "val_macro_f1",
+  "improvement_rule": "strictly_greater",
+  "initialization": "he_uniform",
+  "dropout_p": 0.2,
+  "horizontal_flip_p": 0.5,
+  "normalization": "training_split_rgb_mean_std",
+  "pilot_selection_rule": "highest_mean_best_val_macro_f1",
+  "pilot_evidence": [
+    {
+      "learning_rate": 0.0003,
+      "mean_best_val_macro_f1": 0.7895953284859623,
+      "numerically_valid": true
+    },
+    {
+      "learning_rate": 0.001,
+      "mean_best_val_macro_f1": 0.8260426302396642,
+      "numerically_valid": true
+    },
+    {
+      "learning_rate": 0.003,
+      "mean_best_val_macro_f1": 0.8230043593822791,
+      "numerically_valid": true
+    }
+  ],
+  "test_set_for_selection": false
+}
