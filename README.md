@@ -16,7 +16,7 @@ author_profile: true
 
 **PyTorch · BloodMNIST / MedMNIST v2 · MLP · CNN · Global Average Pooling**
 
-[Jupyter notebook](notebooks/bloodmnist-mlp-cnn-uyentran-study-v7.ipynb) · [Technical report (PDF)](reports/bloodmnist_technical_report.pdf) · [M1 learning curves](figures/bloodmnist_M1_learning_curves.png) · [M2 confusion matrix](figures/bloodmnist_M2_confusion_matrix.png)
+[Jupyter notebook](files/bloodmnist-mlp-cnn-uyentran.ipynb) · [Notebook (HTML)](https://uyentran9.github.io/bloodmnist-mlp-cnn/files/bloodmnist-mlp-cnn-uyentran.html) · [Technical report (PDF)](files/bloodmnist_technical_report_uyentran.pdf) · [M1 learning curves](images/m1-TrainValLoss-ValMacroF1.png) · [M2 confusion matrix](images/m2-test-confusion-matrix.png)
 
 ## Overview
 
@@ -95,9 +95,9 @@ Each run starts with a fresh model, Adam optimizer, and seed-controlled shuffled
 
 ### Learning Curves and Error Analysis
 
-Training histories and learning curves for all three models are generated in the notebook. The best validation checkpoints were selected at epochs 12 (M0), 7 (M1), and 11 (M2). See the [M1 learning curves](figures/bloodmnist_M1_learning_curves.png) for an example of the recorded training/validation loss and validation macro-F1 trajectories.
+Training histories and learning curves for all three models are generated in the notebook. The best validation checkpoints were selected at epochs 12 (M0), 7 (M1), and 11 (M2). See the [M1 learning curves](images/m1-TrainValLoss-ValMacroF1.png) for an example of the recorded training/validation loss and validation macro-F1 trajectories.
 
-A predefined [confusion-matrix analysis of M2](figures/bloodmnist_M2_confusion_matrix.png) found **2,977 correct** and **444 incorrect** predictions among 3,421 test images. Monocytes had the lowest class recall (**0.5739**); **114 of 284** true monocytes were predicted as immature granulocytes. The confusion matrix describes these errors but does not establish why they occur.
+A predefined [confusion-matrix analysis of M2](images/m2-test-confusion-matrix.png) found **2,977 correct** and **444 incorrect** predictions among 3,421 test images. Monocytes had the lowest class recall (**0.5739**); **114 of 284** true monocytes were predicted as immature granulocytes. The confusion matrix describes these errors but does not establish why they occur.
 
 ## Interpretation and Limitations
 
@@ -131,7 +131,7 @@ python -m pip install torch torchvision medmnist numpy pandas matplotlib scikit-
 
 Keep the notebook in `notebooks/` and create `data/` and `results/` at the project root (as shown above). The notebook's `find_project_root()` function locates a parent directory containing **both `notebooks/` and `data/`**. BloodMNIST is downloaded by `medmnist` when needed; dataset files are not redistributed in this repository.
 
-Open the [Jupyter notebook](notebooks/bloodmnist-mlp-cnn-uyentran-study-v7.ipynb) and execute **Parts 0–6 in order** with a fresh kernel. A full run recreates three independently trained models, their best validation-selected checkpoints, histories, learning curves, and the final test analysis. Hardware backends (CPU, Apple Silicon MPS, NVIDIA CUDA) and dependency versions can affect exact floating-point results.
+Open the [Jupyter notebook](files/bloodmnist-mlp-cnn-uyentran.ipynb) and execute **Parts 0–6 in order** with a fresh kernel. A full run recreates three independently trained models, their best validation-selected checkpoints, histories, learning curves, and the final test analysis. Hardware backends (CPU, Apple Silicon MPS, NVIDIA CUDA) and dependency versions can affect exact floating-point results.
 
 | Notebook part | Purpose |
 |---|---|
@@ -147,10 +147,11 @@ Open the [Jupyter notebook](notebooks/bloodmnist-mlp-cnn-uyentran-study-v7.ipynb
 
 | Resource | Description |
 |---|---|
-| [Jupyter notebook](notebooks/bloodmnist-mlp-cnn-uyentran-study-v7.ipynb) | Complete implementation, saved outputs, and explanations |
-| [Technical report (PDF)](reports/bloodmnist_technical_report.pdf) | Three-page summary of methods, results, and limitations |
-| [M1 learning curves](figures/bloodmnist_M1_learning_curves.png) | Training/validation loss and validation macro-F1 |
-| [M2 confusion matrix](figures/bloodmnist_M2_confusion_matrix.png) | Eight-class error analysis of the selected M2 model |
+| [Jupyter notebook](files/bloodmnist-mlp-cnn-uyentran.ipynb) | Complete implementation, saved outputs, and explanations |
+| [Notebook (HTML)](https://uyentran9.github.io/bloodmnist-mlp-cnn/files/bloodmnist-mlp-cnn-uyentran.html) | Browser-readable executed notebook |
+| [Technical report (PDF)](files/bloodmnist_technical_report_uyentran.pdf) | Three-page summary of methods, results, and limitations |
+| [M1 learning curves](images/m1-TrainValLoss-ValMacroF1.png) | Training/validation loss and validation macro-F1 |
+| [M2 confusion matrix](images/m2-test-confusion-matrix.png) | Eight-class error analysis of the selected M2 model |
 | [BloodMNIST / MedMNIST](https://medmnist.com/) | Dataset source and benchmark documentation |
 
 ## References and Attribution
@@ -159,3 +160,5 @@ BloodMNIST is based on the peripheral blood-cell image dataset of **Acevedo et a
 
 **Author:** Victoria Tran (My-Uyen Tran)  
 **Research-use notice:** This is an educational classification study, not a clinically validated diagnostic system. It should not be used for medical decision-making.
+
+
